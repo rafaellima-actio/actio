@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rove Lab — Which sofa is yours?</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f7f5f2;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .quiz-wrapper {
+      background: #ffffff;
+      border-radius: 20px;
+      max-width: 640px;
+      width: 100%;
+      padding: 48px 44px;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.07);
+    }
+
+    .quiz-header { text-align: center; margin-bottom: 36px; }
+    .quiz-header .brand { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #999; margin-bottom: 12px; }
+    .quiz-header h1 { font-size: 26px; font-weight: 600; line-height: 1.3; color: #111; }
+    .quiz-header p { margin-top: 10px; font-size: 14px; color: #777; line-height: 1.6; }
+
+    .progress-bar-wrap { background: #eee; border-radius: 99px; height: 4px; margin-bottom: 36px; overflow: hidden; }
+    .progress-bar-fill { height: 4px; background: #1a1a1a; border-radius: 99px; transition: width 0.4s ease; }
+    .progress-label { font-size: 12px; color: #aaa; text-align: right; margin-top: 6px; margin-bottom: 28px; }
+
+    .question-screen { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .question-text { font-size: 19px; font-weight: 600; color: #111; margin-bottom: 22px; line-height: 1.4; }
+    .options { display: flex; flex-direction: column; gap: 10px; }
+
+    .option-btn {
+      background: #f7f5f2; border: 2px solid transparent; border-radius: 12px;
+      padding: 16px 20px; text-align: left; cursor: pointer; font-size: 14px;
+      color: #222; line-height: 1.5; transition: all 0.18s ease;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .option-btn:hover { border-color: #1a1a1a; background: #fff; }
+    .option-btn .emoji { font-size: 20px; flex-shrink: 0; }
+    .option-btn .label { font-weight: 600; display: block; margin-bottom: 2px; }
+    .option-btn .sub { font-size: 12px; color: #888; display: block; }
+
+    .result-screen { animation: fadeIn 0.4s ease; text-align: center; }
+    .result-badge { display: inline-block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; background: #1a1a1a; color: #fff; padding: 6px 14px; border-radius: 99px; margin-bottom: 18px; }
+    .result-title { font-size: 28px; font-weight: 700; color: #111; margin-bottom: 10px; }
+    .result-tagline { font-size: 14px; color: #777; margin-bottom: 28px; line-height: 1.6; }
+
+    .result-card { background: #f7f5f2; border-radius: 16px; padding: 28px 24px; margin-bottom: 28px; text-align: left; }
+    .result-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #aaa; margin-bottom: 8px; }
+    .result-card p { font-size: 15px; color: #444; line-height: 1.7; }
+    .result-card ul { list-style: none; margin-top: 10px; }
+    .result-card ul li { font-size: 14px; color: #555; padding: 4px 0; }
+    .result-card ul li::before { content: '✓  '; color: #1a1a1a; font-weight: bold; }
+
+    .cta-btn { display: inline-block; background: #1a1a1a; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; padding: 16px 36px; border-radius: 50px; transition: background 0.2s; margin-bottom: 16px; }
+    .cta-btn:hover { background: #333; }
+
+    .restart-btn { display: block; background: none; border: none; color: #aaa; font-size: 13px; cursor: pointer; margin: 0 auto; text-decoration: underline; padding: 4px; }
+    .restart-btn:hover { color: #555; }
+
+    @media (max-width: 520px) {
+      .quiz-wrapper { padding: 32px 24px; }
+      .question-text { font-size: 17px; }
+      .result-title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="quiz-wrapper">
+  <div class="quiz-header">
+    <div class="brand">Rove Lab</div>
+    <h1>Find your perfect sofa and get $50 off your first order.</h1>
+    <p>Answer 7 quick questions and we'll match you with the model made for your lifestyle.</p>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">Question 1 of 7</div>
+
+  <div id="quizContent"></div>
+</div>
+
+<script>
+  const questions = [
+    {
+      id: 'q1',
+      text: 'Where are you planning to use your sofa?',
+      options: [
+        { emoji: '🏠', label: 'Living room or bedroom', sub: 'Indoor space', scores: {} },
+        { emoji: '🌿', label: 'Patio, backyard, or outdoor area', sub: 'Outdoor or semi-open space', scores: { M1_Outdoor: 10 } }
+      ]
+    },
+    {
+      id: 'q2',
+      text: 'Do you need your sofa to double as a bed?',
+      options: [
+        { emoji: '🛏️', label: 'Yes, pretty often', sub: 'I host guests or live in a smaller space', scores: { S8: 10 } },
+        { emoji: '💤', label: 'Would be nice occasionally', sub: 'An extra feature never hurts', scores: { S8: 3 } },
+        { emoji: '🛋️', label: 'No, just a sofa for me', sub: "I'm focused on comfort and design", scores: {} }
+      ]
+    },
+    {
+      id: 'q3',
+      text: "How would you describe your home's style?",
+      options: [
+        { emoji: '✏️', label: 'Clean and minimalist', sub: 'Less is more, quality over quantity', scores: { M1: 2 } },
+        { emoji: '💎', label: 'Sophisticated and refined', sub: 'Every piece has a strong personality', scores: { MarshBello: 2 } },
+        { emoji: '🛋️', label: 'Cozy and casual', sub: 'A home made for living, not showing off', scores: { R4: 2 } }
+      ]
+    },
+    {
+      id: 'q4',
+      text: 'Which design detail catches your eye the most?',
+      options: [
+        { emoji: '🪡', label: 'Rich corduroy velvet with a premium texture', sub: 'That sensory touch of understated luxury', scores: { S8: 2, MarshBello: 1 } },
+        { emoji: '🔲', label: 'Quilted cushions and a low-profile silhouette', sub: 'Elegance with a bold, distinctive identity', scores: { MarshBello: 3 } },
+        { emoji: '➖', label: 'Straight lines, smooth fabric, no fuss', sub: 'The design that never goes out of style', scores: { M1: 3 } },
+        { emoji: '🧸', label: 'Oversized modules and generous cushions', sub: 'Feels like a warm hug', scores: { R4: 3 } }
+      ]
+    },
+    {
+      id: 'q5',
+      text: 'How do you typically use your sofa day-to-day?',
+      options: [
+        { emoji: '🎬', label: 'Binge-watching shows and movies', sub: 'Hours on end without moving', scores: { R4: 2 } },
+        { emoji: '🧑‍💻', label: 'Working, reading, and unwinding', sub: 'I need comfort and good support', scores: { M1: 2 } },
+        { emoji: '🥂', label: 'Hosting guests and entertaining', sub: 'My sofa needs to impress', scores: { MarshBello: 2 } }
+      ]
+    },
+    {
+      id: 'q6',
+      text: 'What kind of seat feel do you prefer?',
+      options: [
+        { emoji: '🪨', label: 'Firm with good postural support', sub: 'Structured and well-balanced', scores: { M1: 2 } },
+        { emoji: '☁️', label: 'Super soft — I want to sink right in', sub: 'Cloud-like, all-enveloping comfort', scores: { R4: 2 } },
+        { emoji: '⚖️', label: 'Balanced: elegant comfort, nothing extreme', sub: 'Just the right amount of softness', scores: { MarshBello: 2, S8: 1 } }
+      ]
+    },
+    {
+      id: 'q7',
+      text: 'What matters most to you when choosing a sofa?',
+      options: [
+        { emoji: '🧹', label: 'Easy to clean and built to last', sub: 'Durability above all else', scores: { M1: 2 } },
+        { emoji: '✨', label: 'Design as the focal point of the room', sub: 'I want everyone to notice it', scores: { MarshBello: 2 } },
+        { emoji: '😴', label: 'Maximum comfort — everything else is secondary', sub: 'The sofa is my favorite spot in the house', scores: { R4: 2 } }
+      ]
+    }
+  ];
+
+  const results = {
+    M1: {
+      name: 'M1 Sofa',
+      tagline: 'The perfect balance of minimalist design and everyday practicality.',
+      description: 'You value clean lines, durability, and a sofa that fits any space. The M1 was built for those who want quality without sacrificing function — with certified stain-resistant fabric and a modular design that grows with you.',
+      highlights: ['Spill-proof Performance Weave fabric', 'Low-profile minimalist silhouette', 'Oeko-Tex® certified & 100% vegan SmartFoam', 'Easy to assemble and reconfigure'],
+      url: 'https://rovelab.com/collections/modular-sofa'
+    },
+    S8: {
+      name: 'S8 Sleeper Sofa',
+      tagline: 'Sophisticated design that transforms into a bed in seconds.',
+      description: 'You need versatility without giving up style. The S8 pairs premium corduroy velvet with the practicality of a sleeper sofa — perfect for apartments, guest rooms, or anyone who loves having options.',
+      highlights: ['Converts to a bed intuitively and quickly', 'Rich corduroy velvet with a premium feel', '100% vegan SmartFoam Technology', 'World-renowned YKK zippers for durability'],
+      url: 'https://rovelab.com/collections/modular-sofa'
+    },
+    R4: {
+      name: 'R4 Sofa',
+      tagline: 'Cloud-like comfort — the coziest sofa for your movie marathons.',
+      description: 'You know exactly what you want: to sink into the sofa and never leave. The R4 delivers an almost unreal level of comfort, with oversized modules and cushions that fully embrace you. Everyone who sits on it will want one.',
+      highlights: ['Ultra-plush high-density foam', 'Large modules with flexible configurations', 'Built for long, lazy sessions of total relaxation', 'Cozy, statement-making design'],
+      url: 'https://rovelab.com/collections/modular-sofa'
+    },
+    MarshBello: {
+      name: 'MarshBello',
+      tagline: 'Modern sophistication, elevated — a style icon for your living room.',
+      description: 'You live well and you like it to show. The MarshBello is for those who see furniture as art — with quilted cushions, a low-profile frame, and that quiet luxury that transforms any room.',
+      highlights: ['Signature quilted cushion design', 'Low-profile frame with a strong presence', 'Elegant, well-balanced comfort', 'Icon of contemporary sophistication'],
+      url: 'https://rovelab.com/collections/modular-sofa'
+    },
+    M1_Outdoor: {
+      name: 'M1 Outdoor',
+      tagline: 'All-weather. All-comfort. Made for every gathering, inside or out.',
+      description: 'You want to enjoy your patio, backyard, or outdoor lounge with the same comfort as indoors. The M1 Outdoor is built to withstand the elements without compromising on style — rain, sun, and heavy use, no problem.',
+      highlights: ['100% weather-resistant construction', 'High-performance outdoor materials', 'Easy to clean and maintain', 'Premium comfort for any environment'],
+      url: 'https://rovelab.com/collections/modular-sofa'
+    }
+  };
+
+  let scores = { M1: 0, S8: 0, R4: 0, MarshBello: 0, M1_Outdoor: 0 };
+  let currentQ = 0;
+
+  function renderQuestion(index) {
+    const q = questions[index];
+    const total = questions.length;
+    const pct = Math.round((index / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `Question ${index + 1} of ${total}`;
+    const html = `
+      <div class="question-screen">
+        <div class="question-text">${q.text}</div>
+        <div class="options">
+          ${q.options.map((opt, i) => `
+            <button class="option-btn" onclick="selectOption(${i})">
+              <span class="emoji">${opt.emoji}</span>
+              <span>
+                <span class="label">${opt.label}</span>
+                <span class="sub">${opt.sub}</span>
+              </span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    document.getElementById('quizContent').innerHTML = html;
+  }
+
+  function selectOption(optIndex) {
+    const q = questions[currentQ];
+    const opt = q.options[optIndex];
+    for (const [model, pts] of Object.entries(opt.scores)) {
+      scores[model] = (scores[model] || 0) + pts;
+    }
+    if (currentQ === 0 && opt.scores.M1_Outdoor) {
+      showResult('M1_Outdoor');
+      return;
+    }
+    currentQ++;
+    if (currentQ < questions.length) {
+      renderQuestion(currentQ);
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult(forceWinner) {
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('progressLabel').textContent = 'Your Result';
+    const winner = forceWinner || Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+    const res = results[winner];
+    const html = `
+      <div class="result-screen">
+        <div class="result-badge">Your perfect sofa</div>
+        <div class="result-title">${res.name}</div>
+        <div class="result-tagline">${res.tagline}</div>
+        <div class="result-card">
+          <h3>Why the ${res.name}?</h3>
+          <p>${res.description}</p>
+          <ul>${res.highlights.map(h => `<li>${h}</li>`).join('')}</ul>
+        </div>
+        <a href="${res.url}" target="_blank" class="cta-btn">Shop the ${res.name} →</a>
+        <button class="restart-btn" onclick="restartQuiz()">Retake the quiz</button>
+      </div>
+    `;
+    document.getElementById('quizContent').innerHTML = html;
+  }
+
+  function restartQuiz() {
+    scores = { M1: 0, S8: 0, R4: 0, MarshBello: 0, M1_Outdoor: 0 };
+    currentQ = 0;
+    renderQuestion(0);
+  }
+
+  renderQuestion(0);
+</script>
+</body>
+</html>
